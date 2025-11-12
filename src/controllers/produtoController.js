@@ -1,9 +1,8 @@
-// src/controllers/produtoController.js
 const db = require('../config/db');
 
 exports.createProduto = async (req, res) => {
   const { nome, descricao, preco, estoque, id_empresa } = req.body;
-
+  
   let logoPath = null;
   if (req.file) {
     logoPath = req.file.path.replace(/\\/g, "/");
@@ -41,7 +40,7 @@ exports.getProdutos = async (req, res) => {
 };
 
 exports.getProdutoPorId = async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params; 
   try {
     const { rows } = await db.query('SELECT * FROM produto WHERE id_produto = $1', [id]);
 
@@ -60,7 +59,7 @@ exports.updateProduto = async (req, res) => {
   const { id } = req.params;
   const { nome, descricao, preco, estoque, id_empresa } = req.body;
 
-  let logoPath = req.body.logo;
+  let logoPath = req.body.logo; 
   if (req.file) {
     logoPath = req.file.path.replace(/\\/g, "/");
   }
@@ -102,7 +101,7 @@ exports.deleteProduto = async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Produto não encontrado.' });
     }
-
+    
     res.status(200).json({ message: 'Produto deletado com sucesso.', produto: rows[0] });
 
   } catch (err) {

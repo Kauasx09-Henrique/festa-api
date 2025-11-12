@@ -116,3 +116,69 @@ exports.updatePedidoStatus = async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
+
+exports.getMeusPedidos = async (req, res) => {
+  const id_cliente = req.cliente.id;
+
+  try {
+    const query = `
+      SELECT
+        p.id_pedido,
+        p.data_pedido,
+        p.total_pedido,
+        p.status_pedido,
+        COALESCE(
+          (SELECT json_agg(json_build_object(
+            'nome_produto', pr.nome,
+            'quantidade', pi.quantidade,
+            'preco_pago', pi.preco_unitario_pago,
+            'logo', pr.logo
+          ))
+          FROM pedido_itens pi
+          JOIN produto pr ON pi.id_produto = pr.id_produto
+          WHERE pi.id_pedido = p.id_pedido),
+          '[]'::json
+        ) as items
+      FROM pedidos p
+      WHERE p.id_cliente = $1
+      ORDER BY p.data_pedido DESC;
+    `;
+    const { rows } = await db.query(query, [id_cliente]);
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error('Erro ao buscar pedidos do cliente:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+};
+exports.getMeuPedidoDetalhes = async (req, res) => {
+  const id_cliente = req.cliente.id;
+  const { id } = req.params;
+
+  try {
+    const pedidoQuery = await db.query(
+      'SELECT * FROM pedidos WHERE id_pedido = $1 AND id_cliente = $2',
+      [id, id_cliente]
+    );
+
+    if (pedidoQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado ou não pertence a você.' });
+    }
+
+    const itemsQuery = await db.query(
+      `SELECT pi.*, p.nome as nome_produto, p.logo
+       FROM pedido_itens pi
+       JOIN produto p ON pi.id_produto = p.id_produto
+       WHERE pi.id_pedido = $1`,
+      [id]
+    );
+
+    res.status(200).json({
+      pedido: pedidoQuery.rows[0],
+      itens: itemsQuery.rows
+    });
+
+  } catch (err) {
+    console.error('Erro ao buscar detalhes do pedido:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+};
